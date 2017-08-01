@@ -1,0 +1,41 @@
+<rt-require dependency="baseUILib" as="baseUILib"/>
+<!--suppress CheckEmptyScriptTag -->
+<rt-require dependency="baseUI" as="baseUI"/>
+<rt-require dependency="compPanels/compPanelFrame/compPanelFrame" as="compPanelFrame"/>
+<rt-require dependency="helpIds" as="helpIds"/>
+
+<compPanelFrame contentClass="settings-panel box-slide-show-settings-panel" title="Regular_Slideshow_Settings_Title" rt-props="this.getFrameProps()" helpId="{helpIds.UTILS.getSettingsHelpId(helpIds.COMP_TYPES.BOX_SLIDE_SHOW, this.props.isMobileEditor)}">
+
+    <baseUI.button rt-if="this.props.isDesktopEditor" key="manageSlidesButton" label="Regular_Slideshow_Settings_Manage_Slides" class="no-margin manage-slides-button" onClick="()=>this.openManageSlidesPanel()"/>
+
+    <baseUI.sectionDividerLabeled label="Regular_Slideshow_Settings_Behavior_Label" infoText="Regular_Slideshow_Settings_Behavior_Tooltip"/>
+    <baseUILib.Divider long="{true}"/>
+    <baseUI.toggle name="switch" valueLink="{this.linkedProperty('autoPlay')}" label="Regular_Slideshow_Settings_Behavior_Auto_Play"/>
+    <baseUILib.Divider long="{true}"/>
+
+    <baseUI.slider rt-if="this.getProperty('autoPlay')" key="slider" label="Regular_Slideshow_Settings_Auto_Play_Interval" valueLink="{this.linkedProperty('autoPlayInterval')}" unit="Slider_Control_seconds_label" min="{0.5}" max="{30}" step="{0.1}"/>
+    <baseUILib.Divider long="{true}" rt-if="this.getProperty('autoPlay')" key="auto-play-interval-divider"/>
+
+    <baseUI.toggle rt-if="this.getProperty('autoPlay')" key="pauseOnAutoPlayToggle" name="switch" valueLink="{this.linkedProperty('pauseAutoPlayOnMouseOver')}" label="Regular_Slideshow_Settings_Pause_Auto_Play_On_Hover"/>
+    <baseUILib.Divider long="{true}" rt-if="this.getProperty('autoPlay')" key="pause-auto-play-on-hover-divider"/>
+
+    <baseUI.sectionDividerLabeled label="Regular_Slideshow_Settings_Transitions_Label" infoText="Regular_Slideshow_Settings_Transitions_Tooltip"/>
+    <baseUILib.Divider long="{true}"/>
+    <baseUI.thumbnails class="with-labels" maxThumbsPerRow="3" valueLink="{this.transitionValueLink()}" onMouseOver="{_.noop}" options="{this.getTransitions()}">
+    </baseUI.thumbnails>
+    <baseUILib.Divider long="{true}"/>
+
+    <baseUI.slider rt-if="this.shouldShowTransitionDuration()" key="transitionDuration" label="Regular_Slideshow_Settings_Transitions_Duration_Label" valueLink="{this.linkedProperty('transDuration')}" unit="Slider_Control_seconds_label" min="{0}" max="{5}" step="{0.1}">
+    </baseUI.slider>
+
+    <baseUILib.Divider long="{true}" rt-if="this.shouldShowTransitionDuration()" key="transition-divider"/>
+
+    <baseUI.buttonsGroup rt-if="this.shouldShowTransitionDirection()" key="transitionDirection" title="Regular_Slideshow_Settings_Transitions_Direction_Label" options="{this.getTransitionDirection()}" valueLink="{this.directionValueLink()}"/>
+
+    <baseUILib.Divider long="{true}"/>
+    <baseUI.sectionDividerLabeled label="Regular_Slideshow_Settings_Content_Label" infoText="Regular_Slideshow_Settings_Content_Tooltip"/>
+    <baseUILib.Divider long="{true}"/>
+    <baseUI.toggle name="switch" valueLink="{this.shouldHideOverflowContentValueLink()}" label="Regular_Slideshow_Settings_Content_Behavior_Label"/>
+    <baseUILib.Divider long="{true}"/>
+
+</compPanelFrame>
