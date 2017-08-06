@@ -67,7 +67,7 @@ define(['react', 'lodash', 'core', 'compPanels/mixins/compPanelMixin', 'compPane
             editorAPI.panelManager.closeAllPanels();
             editorAPI.panelManager.openComponentPanel('rEditor.panels.boxSlideShowManageSlidesPanel', panelProps);
         },
-        shouldHideOverflowContentValueLink: function(){
+        shouldHideOverflowContentValueLink: function () {
             return {
                 value: this.getProperty('shouldHideOverflowContent'),
                 requestChange: this.hideOverflowContentToggeled
@@ -96,21 +96,21 @@ define(['react', 'lodash', 'core', 'compPanels/mixins/compPanelMixin', 'compPane
             }
             return boxAnimations;
         },
-        shouldShowTransitionDirection: function(){
+        shouldShowTransitionDirection: function () {
             return _.includes(ANIMATIONS_NOT_SUITABLE_FOR_OVERFLOW_HIDDEN, this.getProperty('transition'));
         },
-        shouldShowTransitionDuration: function(){
+        shouldShowTransitionDuration: function () {
             return this.getProperty('transition') !== 'NoTransition';
         },
         getTransitionDirection: function () {
             var verticalTransition = this.getProperty('transition') === 'SlideVertical';
             return verticalTransition ? VERTICAL_TRANSITION_DIRECTIONS : HORIZONTAL_TRANSITION_DIRECTIONS;
         },
-        transitionValueLink: function(){
+        transitionValueLink: function () {
             var baseValueLink = this.linkedProperty('transition');
             return {
                 value: baseValueLink.value,
-                requestChange: function(newVal){
+                requestChange: function (newVal) {
                     baseValueLink.requestChange(newVal);
                     var editorAPI = this.getEditorAPI();
                     var biParams = _.assign({transition: newVal}, editorAPI.components.getDefaultBiParams(this.props.selectedComponent[0]));
@@ -118,11 +118,11 @@ define(['react', 'lodash', 'core', 'compPanels/mixins/compPanelMixin', 'compPane
                 }.bind(this)
             };
         },
-        directionValueLink: function(){
+        directionValueLink: function () {
             var baseValueLink = this.linkedProperty('direction');
             return {
                 value: baseValueLink.value,
-                requestChange: function(newVal){
+                requestChange: function (newVal) {
                     baseValueLink.requestChange(newVal);
                     var editorAPI = this.getEditorAPI();
                     var biParams = _.assign({direction: newVal}, editorAPI.components.getDefaultBiParams(this.props.selectedComponent[0]));

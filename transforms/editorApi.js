@@ -6,7 +6,7 @@ const xmlDomUtils = require('./xmlDomUtils');
 const wrapWithFunction = x => `function yonti(){${x};}`;
 
 const connectTheComponent = wrapWithFunction(`
-var ConnectedComponent = higherOrderComponents.connectEditorAPI(mapEditorApiToProps)(Component);
+var ConnectedComponent = higherOrderComponents.connectEditorAPI(higherOrderComponents.createMapEditorAPIToProps(mapEditorApiToProps, Component))(Component);
 
             ConnectedComponent.pure = Component;
 
@@ -129,11 +129,14 @@ export default function transformer(file, api) {
             j.identifier(propName));
 
     function getPath(node, stopAt) {
-        if (node.type === 'ThisExpression') {
-            return ['this'];
-        }
         if (node.type === 'CallExpression' || (stopAt && node.name === stopAt)) {
             return [];
+        }
+        if (node.type === 'Identifier') {
+            return [node.name];
+        }
+        if (node.type === 'ThisExpression') {
+            return ['this'];
         }
         return getPath(node.object, stopAt).concat(node.property.name || node.property.raw);
     }
@@ -206,7 +209,7 @@ export default function transformer(file, api) {
                 return;
             }
 
-            if (!isComputed && !name.startsWith('rt-')) {
+            if (!isComputed && !name.startsWith('rt-') && !name.startsWith('on')) {
                 return;
             }
 
@@ -221,78 +224,101 @@ export default function transformer(file, api) {
 
     const rtFilePath = file.path.replace(/\.js$/, '.rt');
 
-    if (!fs.existsSync(rtFilePath)) {
+    let rtFileExists = fs.existsSync(rtFilePath);
+    let isMixin = file.path.endsWith('Mixin.js') || file.path.endsWith('Mixin.input.js');
+    if (!(rtFileExists || isMixin)) {
         return file.source;
     }
 
-    const rtFile = fs.readFileSync(rtFilePath, 'utf8');
-
     const myFile = j(file.source);
 
-    const newRtFile = replaceInRtFile(rtFile);
-    if (process.env.NODE_ENV === 'test') {
-        var rtOutputFile = fs.readFileSync(file.path.replace(/input\.js$/, 'output.rt'), 'utf8');
-        expect(newRtFile.trim()).toEqual(rtOutputFile.trim());
-    } else {
-        if (replacements.hasReplacements()) {
-            fs.writeFileSync(rtFilePath, newRtFile);
+    if (rtFileExists) {
+        const rtFile = fs.readFileSync(rtFilePath, 'utf8');
+
+        const newRtFile = replaceInRtFile(rtFile);
+        if (process.env.NODE_ENV === 'test') {
+            var rtOutputFile = fs.readFileSync(file.path.replace(/input\.js$/, 'output.rt'), 'utf8');
+            expect(newRtFile.trim()).toEqual(rtOutputFile.trim());
+        } else {
+            if (replacements.hasReplacements()) {
+                fs.writeFileSync(rtFilePath, newRtFile);
+            }
         }
     }
 
     // replace all this.getEditorAPI() calls with this.props and store them
     replaceAllEditorApiInCode(myFile);
 
+    const parameterName = 'editorApi';
+    const props = _.map(
+        replacements.getProps(),
+        (val, name) => j.property('init', j.identifier(name), val));
 
     if (replacements.hasReplacements()) {
-        let reactClass = myFile
-            .find(j.CallExpression, {callee: {object: {name: 'React'}, property: {name: 'createClass'}}});
+        if (isMixin) {
+            // good enough?
+            const longestReturnStatment = _.maxBy(myFile.find(j.ReturnStatement).paths(), path => path.value.end - path.value.start);
+            const mapEditorApiFunctionName = `mapEditorApiToProps_${file.path.match(/\/(\w+)\./)[1]}`;
+            const mapEditorApiToProps = j.functionExpression(
+                j.identifier(mapEditorApiFunctionName),
+                [j.identifier(parameterName), j.identifier('props')],
+                j.blockStatement([
+                    j.returnStatement(
+                        j.objectExpression(props)
+                    )
+                ]));
+            longestReturnStatment.value.argument.properties.push(
+                j.property('init', j.identifier('statics'), j.objectExpression([
+                    j.property('init', j.identifier(mapEditorApiFunctionName), mapEditorApiToProps)
+                ]))
+            );
+            const a = 5;
 
-        // add mapEditorApiToProps and connect the component
-        reactClass
-            .filter(path => getParentType(path) === 'ReturnStatement')
-            .map(path => path.parentPath)
-            .replaceWith(path => j.variableDeclaration(
-                'var', [j.variableDeclarator(j.identifier('Component'), path.value.argument)]))
-            .forEach(path => {
-                const parameterName = 'editorApi';
-                const props = _.map(
-                    replacements.getProps(),
-                    (val, name) => j.property('init', j.identifier(name), val));
-                const mapEditorApiToProps = j.functionDeclaration(
-                    j.identifier('mapEditorApiToProps'),
-                    [j.identifier(parameterName), j.identifier('props')],
-                    j.blockStatement([
-                        j.returnStatement(
-                            j.objectExpression(props)
-                        )
-                    ]));
+        } else {
+            let reactClass = myFile
+                .find(j.CallExpression, {callee: {object: {name: 'React'}, property: {name: 'createClass'}}});
 
-                const connect = j(connectTheComponent).find(j.BlockStatement).nodes()[0].body;
+            // add mapEditorApiToProps and connect the component
+            reactClass
+                .filter(path => getParentType(path) === 'ReturnStatement')
+                .map(path => path.parentPath)
+                .replaceWith(path => j.variableDeclaration(
+                    'var', [j.variableDeclarator(j.identifier('Component'), path.value.argument)]))
+                .forEach(path => {
+                    const mapEditorApiToProps = j.functionDeclaration(
+                        j.identifier('mapEditorApiToProps'),
+                        [j.identifier(parameterName), j.identifier('props')],
+                        j.blockStatement([
+                            j.returnStatement(
+                                j.objectExpression(props)
+                            )
+                        ]));
 
-                let insertAtTheEndOfTheFile = [mapEditorApiToProps].concat(connect);
-                j(path).insertAfter(insertAtTheEndOfTheFile);
-            });
+                    const connect = j(connectTheComponent).find(j.BlockStatement).nodes()[0].body;
 
-        reactClass
-            .find(j.Property, {key: {name: 'render'}})
-            .forEach(path => {
-                const propTypesObj = _.map(
-                    replacements.getPropTypes(),
-                    (val, name) => j.property('init', j.identifier(name), val));
+                    let insertAtTheEndOfTheFile = [mapEditorApiToProps].concat(connect);
+                    j(path).insertAfter(insertAtTheEndOfTheFile);
+                });
 
-                j(path).insertAfter(j.property('init', j.identifier('propTypes'), j.objectExpression(propTypesObj)));
-            })
+            reactClass
+                .find(j.Property, {key: {name: 'render'}})
+                .forEach(path => {
+                    const propTypesObj = _.map(
+                        replacements.getPropTypes(),
+                        (val, name) => j.property('init', j.identifier(name), val));
 
-        myFile
-            .find(j.CallExpression, {callee: {name: 'define'}})
-            .forEach(path => {
-                path.value.arguments[0].elements.push(j.literal('higherOrderComponents'));
-                path.value.arguments[1].params.push(j.identifier('higherOrderComponents'));
-            })
+                    j(path).insertAfter(j.property('init', j.identifier('propTypes'), j.objectExpression(propTypesObj)));
+                })
+
+            myFile
+                .find(j.CallExpression, {callee: {name: 'define'}})
+                .forEach(path => {
+                    path.value.arguments[0].elements.push(j.literal('higherOrderComponents'));
+                    path.value.arguments[1].params.push(j.identifier('higherOrderComponents'));
+                });
+        }
 
         return myFile.toSource({quote: 'single'});
-    } else {
-        return file.source;
     }
-
+    return file.source;
 }

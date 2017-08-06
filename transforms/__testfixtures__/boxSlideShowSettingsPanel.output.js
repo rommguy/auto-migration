@@ -87,7 +87,7 @@ define([
             this.props.openComponentPanel('rEditor.panels.boxSlideShowManageSlidesPanel', panelProps);
         },
 
-        shouldHideOverflowContentValueLink: function(){
+        shouldHideOverflowContentValueLink: function () {
             return {
                 value: this.getProperty('shouldHideOverflowContent'),
                 requestChange: this.hideOverflowContentToggeled
@@ -119,11 +119,11 @@ define([
             return boxAnimations;
         },
 
-        shouldShowTransitionDirection: function(){
+        shouldShowTransitionDirection: function () {
             return _.includes(ANIMATIONS_NOT_SUITABLE_FOR_OVERFLOW_HIDDEN, this.getProperty('transition'));
         },
 
-        shouldShowTransitionDuration: function(){
+        shouldShowTransitionDuration: function () {
             return this.getProperty('transition') !== 'NoTransition';
         },
 
@@ -132,11 +132,11 @@ define([
             return verticalTransition ? VERTICAL_TRANSITION_DIRECTIONS : HORIZONTAL_TRANSITION_DIRECTIONS;
         },
 
-        transitionValueLink: function(){
+        transitionValueLink: function () {
             var baseValueLink = this.linkedProperty('transition');
             return {
                 value: baseValueLink.value,
-                requestChange: function(newVal){
+                requestChange: function (newVal) {
                     baseValueLink.requestChange(newVal);
                     var biParams = _.assign({transition: newVal}, this.props.defaultBiParams);
                     this.props.biEvent(core.bi.events.boxSlideShow.SETTINGS_TRANSITION_SELECTED, biParams);
@@ -144,11 +144,11 @@ define([
             };
         },
 
-        directionValueLink: function(){
+        directionValueLink: function () {
             var baseValueLink = this.linkedProperty('direction');
             return {
                 value: baseValueLink.value,
-                requestChange: function(newVal){
+                requestChange: function (newVal) {
                     baseValueLink.requestChange(newVal);
                     var biParams = _.assign({direction: newVal}, this.props.defaultBiParams);
                     this.props.biEvent(core.bi.events.boxSlideShow.SETTINGS_TRANSITION_DIRECTION_SELECTED, biParams);
@@ -170,7 +170,7 @@ define([
         };
     }
 
-    var ConnectedComponent = higherOrderComponents.connectEditorAPI(mapEditorApiToProps)(Component);
+    var ConnectedComponent = higherOrderComponents.connectEditorAPI(higherOrderComponents.createMapEditorAPIToProps(mapEditorApiToProps, Component))(Component);
 
     ConnectedComponent.pure = Component;
 
